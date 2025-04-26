@@ -90,31 +90,54 @@ mutation {
   bulkOperationRunQuery(
     query: """
     {
-      products {
-        id
-        title
-        variants {
-          id
-          sku
-          inventoryQuantity
-          inventoryItem {
-            inventoryLevels(first: 1) {
-              available
-              location { id name }
+      products(first: 100) {
+        edges {
+          node {
+            id
+            title
+            variants(first: 10) {
+              edges {
+                node {
+                  id
+                  sku
+                  inventoryQuantity
+                  inventoryItem {
+                    inventoryLevels(first: 1) {
+                      edges {
+                        node {
+                          quantities(names: ["AVAILABLE"]) {
+                            name
+                            quantity
+                          }
+                          location { id name }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
-      orders(query: "created_at:>=2025-04-01 created_at:<=2025-04-21") {
-        id
-        createdAt
-        lineItems {
-          quantity
-          variant {
+      orders(query: "created_at:>=2025-04-01 created_at:<=2025-04-21", first: 100) {
+        edges {
+          node {
             id
-            sku
-            product {
-              title
+            createdAt
+            lineItems(first: 10) {
+              edges {
+                node {
+                  quantity
+                  variant {
+                    id
+                    sku
+                    product {
+                      title
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -133,5 +156,3 @@ mutation {
     }
   }
 }
-
-
