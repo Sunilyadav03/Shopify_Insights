@@ -30,6 +30,42 @@ query InventorySales {
 }
 
 
+#2nd way:- Bulk mutation based
+
+mutation bulkOperationRunQuery($query: String!) {
+  bulkOperationRunQuery(query: $query) {
+    bulkOperation {
+      id
+      status
+      url
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+#Variable tab
+{
+  "query": "{\n  products(first: 100) {\n    edges {\n      node {\n        id\n        title\n        variants(first: 10) {\n          edges {\n            node {\n              id\n              sku\n              inventoryQuantity\n              inventoryItem {\n                inventoryLevels(first: 1) {\n                  edges {\n                    node {\n                      quantities(names: [\"AVAILABLE\"]) {\n                        name\n                        quantity\n                      }\n                      location { id name }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}"
+}
+
+#After all of this 
+query {
+  node(id: "your product Id") {
+    ... on BulkOperation {
+      id
+      status
+      url
+      errorCode
+      objectCount
+    }
+  }
+}
+
+
+
 Step 2: Fetch Sales Data (Quantity_sold)
 #Use the sales query to calculate Quantity_sold by summing line item quantities for orders from April 1–21, 2025:
 
@@ -66,6 +102,43 @@ query SalesData {
   }
 }
 
+#same sales data fetch with bulk mutation
+
+mutation bulkOperationRunQuery($query: String!) {
+  bulkOperationRunQuery(query: $query) {
+    bulkOperation {
+      id
+      status
+      url
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+#Variable tab
+{
+  "query": "{\n  orders(query: \"created_at:>=2025-04-01 created_at:<=2025-04-21\", first: 100) {\n    edges {\n      node {\n        id\n        createdAt\n        lineItems(first: 10) {\n          edges {\n            node {\n              quantity\n              variant {\n                id\n                sku\n                product {\n                  title\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}"
+}
+
+#Run this, after copying "id"
+
+query {
+  node(id: "Write the Id, Copy from above query response") {
+    ... on BulkOperation {
+      id
+      status
+      url
+      errorCode
+      objectCount
+    }
+  }
+}
+
+
+
 # Step 3: Approximate Starting_quantity
 # For each variant:
 
@@ -86,65 +159,8 @@ Sell_through_rate = (Quantity_sold / Starting_quantity) * 100
 #Clubbed data fetching
 #Purpose: Fetches product inventory (id, title, variants with sku, inventoryQuantity, and quantities[AVAILABLE]) and orders (April 1–21, 2025) with lineItems.quantity for Inventory_sales metrics.
 
-mutation {
-  bulkOperationRunQuery(
-    query: """
-    {
-      products(first: 100) {
-        edges {
-          node {
-            id
-            title
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  sku
-                  inventoryQuantity
-                  inventoryItem {
-                    inventoryLevels(first: 1) {
-                      edges {
-                        node {
-                          quantities(names: ["AVAILABLE"]) {
-                            name
-                            quantity
-                          }
-                          location { id name }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-      orders(query: "created_at:>=2025-04-01 created_at:<=2025-04-21", first: 100) {
-        edges {
-          node {
-            id
-            createdAt
-            lineItems(first: 10) {
-              edges {
-                node {
-                  quantity
-                  variant {
-                    id
-                    sku
-                    product {
-                      title
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    """
-  ) {
+mutation bulkOperationRunQuery($query: String!) {
+  bulkOperationRunQuery(query: $query) {
     bulkOperation {
       id
       status
@@ -156,3 +172,28 @@ mutation {
     }
   }
 }
+
+
+
+#Variable(In variable tab):- 
+
+{
+  "query": "{\n  products(first: 100) {\n    edges {\n      node {\n        id\n        title\n        variants(first: 10) {\n          edges {\n            node {\n              id\n              sku\n              inventoryQuantity\n              inventoryItem {\n                inventoryLevels(first: 1) {\n                  edges {\n                    node {\n                      quantities(names: [\"AVAILABLE\"]) {\n                        name\n                        quantity\n                      }\n                      location { id name }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n  orders(query: \"created_at:>=2025-04-01 created_at:<=2025-04-21\", first: 100) {\n    edges {\n      node {\n        id\n        createdAt\n        lineItems(first: 10) {\n          edges {\n            node {\n              quantity\n              variant {\n                id\n                sku\n                product {\n                  title\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}"
+}
+
+
+# After Running this, Run the following query:-
+
+query {
+  node(id: "Write the Id, Copy from above query response") {
+    ... on BulkOperation {
+      id
+      status
+      url
+      errorCode
+      objectCount
+    }
+  }
+}
+
+# The above Poll return an URL(Once status: COMPLETED) -->use the url to download JSONL File
