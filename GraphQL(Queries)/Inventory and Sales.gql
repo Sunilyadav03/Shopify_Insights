@@ -84,7 +84,7 @@ Sell_through_rate = (Quantity_sold / Starting_quantity) * 100
 
 
 #Clubbed data fetching
-
+#Purpose: Fetches product inventory (id, title, variants with sku, inventoryQuantity, and quantities[AVAILABLE]) and orders (April 1–21, 2025) with lineItems.quantity for Inventory_sales metrics.
 
 mutation {
   bulkOperationRunQuery(
