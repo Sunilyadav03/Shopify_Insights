@@ -1,1 +1,83 @@
+Step 1: Fetch Inventory Data (Ending_quantity)
+
+#Key Fields:
+#1. title: Maps to Product_title.
+#2. sku: Maps to Product_variant_sku.
+#3. inventoryQuantity: Maps to Ending_quantity (current inventory as of April 21, 2025).
+
+query InventorySales {
+  products(first: 100) {
+    edges {
+      node {
+        id
+        title
+        variants(first: 10) {
+          edges {
+            node {
+              id
+              sku
+              inventoryQuantity
+            }
+          }
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+
+Step 2: Fetch Sales Data (Quantity_sold)
+#Use the sales query to calculate Quantity_sold by summing line item quantities for orders from April 1–21, 2025:
+
+#Key Fields:
+#1. lineItems.quantity: Units sold for each variant.
+#2. variant.sku: Links sales to inventory data.
+
+query SalesData {
+  orders(first: 100, query: "created_at:>=2025-04-01 created_at:<=2025-04-21") {
+    edges {
+      node {
+        id
+        createdAt
+        lineItems(first: 10) {
+          edges {
+            node {
+              quantity
+              variant {
+                id
+                sku
+                product {
+                  title
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+# Step 3: Approximate Starting_quantity
+# For each variant:
+
+Ending_quantity: From inventoryQuantity in the inventory query.
+Quantity_sold: Sum of quantity for the variant’s sku from the sales query.
+
+```
+Starting_quantity: Calculate as Ending_quantity + Quantity_sold.
+```
+
+# Step 4: Calculate Sell_through_rate
+```
+Sell_through_rate = (Quantity_sold / Starting_quantity) * 100
+```
 
