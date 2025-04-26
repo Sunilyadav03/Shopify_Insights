@@ -81,3 +81,57 @@ Starting_quantity: Calculate as Ending_quantity + Quantity_sold.
 Sell_through_rate = (Quantity_sold / Starting_quantity) * 100
 ```
 
+
+
+#Clubbed data fetching
+
+
+mutation {
+  bulkOperationRunQuery(
+    query: """
+    {
+      products {
+        id
+        title
+        variants {
+          id
+          sku
+          inventoryQuantity
+          inventoryItem {
+            inventoryLevels(first: 1) {
+              available
+              location { id name }
+            }
+          }
+        }
+      }
+      orders(query: "created_at:>=2025-04-01 created_at:<=2025-04-21") {
+        id
+        createdAt
+        lineItems {
+          quantity
+          variant {
+            id
+            sku
+            product {
+              title
+            }
+          }
+        }
+      }
+    }
+    """
+  ) {
+    bulkOperation {
+      id
+      status
+      url
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+
