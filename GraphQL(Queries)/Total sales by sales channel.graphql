@@ -1,0 +1,136 @@
+# Clubbed
+
+mutation bulkOperationRunQuery($query: String!) {
+  bulkOperationRunQuery(query: $query) {
+    bulkOperation {
+      id
+      status
+      url
+      partialDataUrl
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+# For Variable Tab;-(for last 365 days)
+{
+  "query": "query { orders(query: \"created_at:>2024-04-27\") { edges { node { id name createdAt publication { name } totalPriceSet { shopMoney { amount currencyCode } } subtotalPriceSet { shopMoney { amount currencyCode } } totalShippingPriceSet { shopMoney { amount currencyCode } } discountApplications(first: 100) { edges { node { value { ... on MoneyV2 { amount currencyCode } ... on PricingPercentageValue { percentage } } } } } refunds { totalRefundedSet { shopMoney { amount currencyCode } } } lineItems(first: 100) { edges { node { quantity originalUnitPriceSet { shopMoney { amount currencyCode } } discountedUnitPriceSet { shopMoney { amount currencyCode } } } } } } } } }"
+}
+
+#Query
+
+query {
+  node(id: "ID") {
+    ... on BulkOperation {
+      id
+      status
+      url
+      errorCode
+      objectCount
+    }
+  }
+}
+
+# Will return an URL, with the help of URL, download JSONL data.
+
+
+
+
+
+#Seperate Query
+
+query Orders($first: Int!, $after: String, $query: String) {
+  orders(first: $first, after: $after, query: $query) {
+    edges {
+      cursor
+      node {
+        id
+        name
+        createdAt
+        publication {
+          name
+        }
+        totalPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        subtotalPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        totalShippingPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        discountApplications(first: 100) {
+          edges {
+            node {
+              value {
+                ... on MoneyV2 {
+                  amount
+                  currencyCode
+                }
+                ... on PricingPercentageValue {
+                  percentage
+                }
+              }
+            }
+          }
+        }
+        refunds {
+          totalRefundedSet {
+            shopMoney {
+              amount
+              currencyCode
+            }
+          }
+        }
+        lineItems(first: 100) {
+          edges {
+            node {
+              quantity
+              originalUnitPriceSet {
+                shopMoney {
+                  amount
+                  currencyCode
+                }
+              }
+              discountedUnitPriceSet {
+                shopMoney {
+                  amount
+                  currencyCode
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+
+#Variable tab
+
+{
+  "first": 250,
+  "after": null,
+  "query": "created_at:>2024-01-01"
+}
+
+#first: Fetches up to 250 orders (Shopify’s maximum per query).
+#after: Cursor for pagination (null for the first page).
+#query: Filters orders since January 1, 2024. Adjust as needed (e.g., created_at:>2025-01-01).
