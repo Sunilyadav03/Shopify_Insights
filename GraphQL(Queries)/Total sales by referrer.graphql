@@ -1,0 +1,15 @@
+# To fetch total sales data by referrer from our Shopify store using the GraphQL Admin API, we need to query order-related data and aggregate it by referrer source and name. Shopify's GraphQL Admin API supports bulk operations for large datasets, which is ideal for this use case. Below, I’ll provide both a bulk query for asynchronous data retrieval and a standard GraphQL query for smaller datasets or testing, as per Shopify’s official documentation.
+
+# Bulk Query
+
+#The bulk query uses bulkOperationRunQuery to fetch large datasets asynchronously, returning results in a JSONL file.
+#The standard query is synchronous and suitable for smaller datasets but may require pagination for large stores.
+
+#Shopify’s GraphQL Admin API does not directly provide aggregated sales data by referrer, so you’ll need to fetch raw order data and process it client-side to compute totals (e.g., gross sales, net sales).
+#Fields like referrerUrl, totalPriceSet, and subtotalPriceSet on the Order object will help derive the required metrics.
+#Ensure your app has the necessary access scopes (read_orders, read_all_orders) to query order data.
+#The response will include raw order data, which you can filter and aggregate to compute:
+#Orders: Count of orders per referrer.
+#Total Sales: Sum of totalPriceSet (includes taxes and shipping).
+#Gross Sales: Sum of subtotalPriceSet (excludes discounts, taxes, shipping).
+#Net Sales: Gross sales minus discounts and returns (use totalPriceSet adjusted for refunds).
