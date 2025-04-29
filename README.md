@@ -18,3 +18,46 @@ The "quantity" in this context is the numerical value associated with the number
 
 **Example:**
 Imagine a sales order for a customer. One line item might be for "20 boxes of chocolates". In this case, the "quantity" for that line item is 20, representing the number of boxes of chocolates included in that specific line. 
+
+### Shopify does not expose true session data (like visitors, bounce rate, session source) via the Admin API.
+
+Shopify’s REST and GraphQL Admin APIs focus on order, product, and customer data, but analytics data (like sessions, traffic sources, city, etc.) is only available through the Shopify Analytics UI or Shopify Plus APIs (some parts are also available through Shopify’s Analytics exports or third-party integrations like GA4, Mixpanel, or Segment).
+
+✅ **Our Options:**
+
+### 1. Use Shopify Analytics Reports (Manual Export)
+- Go to **Shopify Admin → Analytics → Reports → “Sessions by referrer”**
+- Export as **CSV**
+- Use that for analysis or automation (via app)
+
+### 2. Use Google Analytics / GA4 (Best for Attribution)
+You can collect this data externally by:
+
+- Tracking **UTM parameters**, **referrer info**, and **city** via GA
+- Connecting Shopify to GA via **pixel** or **GTM**
+
+GA4 can track:
+
+- **Referrer URL**
+- **City**
+- **Source/Medium**
+- **User sessions / visitors**
+
+Then you can extract this using the **Google Analytics Reporting API**.
+
+### 3. Use Shopify’s `webPixel` or ScriptTags to Track
+If you need more control:
+
+- Capture session details (**referrer**, **location via IP**, etc.)
+- Store them in:
+  - **Customer metafields**
+  - **Order metafields** or `note_attributes`
+- Use **REST API** to query later
+
+
+| Data Field             | REST API/GraphQL | GA4 / WebPixel | Shopify Admin |
+|------------------------|----------|----------------|----------------|
+| Referrer source/name   | ❌        | ✅              | ✅ (UI)         |
+| Session city           | ❌ (But we can extract it through customer's default address)       | ✅              | ✅ (UI)         |
+| Online store visitors  | ❌        | ✅              | ✅ (UI)         |
+| Session count          | ❌        | ✅              | ✅ (UI)         |
