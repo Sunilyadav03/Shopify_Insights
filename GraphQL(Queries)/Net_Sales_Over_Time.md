@@ -132,8 +132,6 @@ with open("net_sales_over_time.csv", "w", newline="") as csvfile:
 
 ***Output of the Above .py file:-***
 
-Day        | Net Sales
---------------------
-2025-04-29 | $4200.00
-2025-04-30 | $3500.00
+<img width="247" alt="Screenshot 2025-05-05 at 13 19 09" src="https://github.com/user-attachments/assets/a09c040d-231d-4863-94fe-ec38a1d19ab6" />
+
 
