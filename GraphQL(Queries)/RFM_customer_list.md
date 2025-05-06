@@ -310,5 +310,6 @@ with open("rfm_customer_list.csv", "w", newline="") as csvfile:
 ```
 
 **Output**
+
 <img width="938" alt="Screenshot 2025-05-06 at 19 44 47" src="https://github.com/user-attachments/assets/d7d88f92-423a-4ae7-ae43-0601c2d7397a" />
 
