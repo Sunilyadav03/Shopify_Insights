@@ -319,6 +319,7 @@ Now, aggregate the customer data by RFM group to calculate:
     - Average Days Since Last Order.
     - Average Total Number of Orders.
     - Average Total Amount Spent.
+
 ```
 import json
 import sqlite3
@@ -360,7 +361,7 @@ for customer_id, metrics in customer_data.items():
 aggregated_data = []
 for rfm_group, metrics in sorted(rfm_groups.items()):
     customer_count = metrics["customer_count"]
-    percent_customers = (customer_count / total_customers * 100) if total_customers > 0 else 0
+    percent_customers = (customer_count / total_customers) if total_customers > 0 else 0  # Decimal form (e.g., 0.5000)
     new_customers = metrics["new_customers"]
     avg_days_since_last_order = metrics["days_since_last_order_sum"] / customer_count
     avg_total_orders = metrics["total_orders_sum"] / customer_count
@@ -394,15 +395,17 @@ conn.commit()
 conn.close()
 print("Data stored in rfm_analysis.db")
 
-# Output results and save to CSV
+# Output results and save to CSV in the desired format
 print("RFM Group | Percent of Customers | New Customer Records | Days Since Last Order | Total Number of Orders | Total Amount Spent")
 print("-" * 100)
 with open("rfm_analysis.csv", "w", newline="") as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(["RFM Group", "Percent of Customers", "New Customer Records", "Days Since Last Order", "Total Number of Orders", "Total Amount Spent"])
     for rfm_group, percent_customers, new_customers, days_since_last_order, total_orders, total_spent in aggregated_data:
-        print(f"{rfm_group} | {percent_customers:.2f}% | {new_customers} | {days_since_last_order:.2f} | {total_orders:.2f} | ${total_spent:.2f}")
-        writer.writerow([rfm_group, f"{percent_customers:.2f}%", new_customers, f"{days_since_last_order:.2f}", f"{total_orders:.2f}", f"${total_spent:.2f}"])
+        # Format for display: remove % and $, simplify numbers
+        print(f"{rfm_group} | {percent_customers:.4f} | {new_customers} | {int(days_since_last_order) if days_since_last_order.is_integer() else days_since_last_order:.2f} | {int(total_orders) if total_orders.is_integer() else total_orders:.2f} | {total_spent:.2f}")
+        # Write to CSV: same formatting
+        writer.writerow([rfm_group, f"{percent_customers:.4f}", new_customers, f"{int(days_since_last_order) if days_since_last_order.is_integer() else days_since_last_order:.2f}", f"{int(total_orders) if total_orders.is_integer() else total_orders:.2f}", f"{total_spent:.2f}"])
 
 ```
 
@@ -421,7 +424,7 @@ with open("rfm_analysis.csv", "w", newline="") as csvfile:
     - SQLite database (rfm_analysis.db).
  
 **Output**
-<img width="1075" alt="Screenshot 2025-05-06 at 18 58 24" src="https://github.com/user-attachments/assets/bbccffe6-4460-4698-ba9e-2512eddf73f7" />
+<img width="1092" alt="Screenshot 2025-05-06 at 19 49 59" src="https://github.com/user-attachments/assets/618ea4f8-cece-4f9f-af74-7dd9810aaae2" />
 
 
 ### Notes
