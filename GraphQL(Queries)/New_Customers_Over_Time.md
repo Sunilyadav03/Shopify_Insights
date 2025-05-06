@@ -4,18 +4,27 @@ Need to fetch the following data:-
   - Customers
   - Orders
   - Total sales
+  - Day (previous_period)
+  - Customers (previous_period)
+  - Orders (previous_period)
+  - Total sales (previous_period)
+
 
 
 The `Customer_by_location.md` script we’ve been working with focuses on aggregating `new customers by location`, but it doesn’t track `new customers over time (by day)` or include `orders` and `total sales`. We’ll need to create a new script to meet this requirement, leveraging Shopify’s GraphQL API data (similar to the JSONL file format you provided) and Shopify’s definition of a "new customer" (a customer who placed their first order during the time period, as per Shopify’s customer reports).
 
 **Understanding the Requirement**
 - Columns:
-    - `Day:` The date (e.g., 2025-05-01).
-    - `Customers:` The number of new customers who placed their first order on that day.
-    - `Orders:` The total number of orders placed by these new customers on that day.
-    - `Total sales:` The total sales amount (in the store’s currency) from these orders.
+    - `Day`: The date (e.g., 2025-04-29).
+    - `Customers`: The number of new customers who placed their first order on that day.
+    - `Orders`: The total number of orders placed by these new customers on that day.
+    - `Total sales`: The total sales amount (in the store’s currency) from these orders.
+    - `Day (previous_period)`: The corresponding day in the previous period (e.g., if the current day is `2025-04-29`, the previous period day might be `2025-03-29` for a month-over-month comparison).
+    - `Customers (previous_period)`: Number of new customers on the corresponding day in the previous period.
+    - `Orders (previous_period)`: Number of orders placed by those new customers on that day in the previous period.
+    - `Total sales (previous_period)`: Total sales from those orders in the previous period.
 
-**New Customer:** Based on Shopify’s customer reports (e.g., "First-time vs returning customer sales report"), a new customer is someone who placed their first order with the store during the specified time period. This means we need to look at the customer’s entire order history to determine if a given order is their first.
+**New Customer:** Based on Shopify’s customer reports, a new customer is someone who placed their first order with the store during the specified time period. This means we need to look at the customer’s entire order history to determine if a given order is their first.
 
 ### Step 1: Define the Bulk Query to Fetch Required Data
 We need a GraphQL bulk query to fetch:
@@ -97,10 +106,16 @@ We’ll create a Python script to:
 import json
 import csv
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Path to the JSONL file
-JSONL_FILE_PATH = "/content/New_Customers_Over_TIme.jsonl"
+JSONL_FILE_PATH = "/content/New_Customers_Over_Time.jsonl"
+
+# Define periods (based on the latest order date in the JSONL file: April 29, 2025)
+CURRENT_END = datetime(2025, 4, 30).date()  # April 1 to April 30, 2025
+CURRENT_START = datetime(2025, 4, 1).date()
+PREVIOUS_END = datetime(2025, 3, 31).date()  # March 1 to March 31, 2025
+PREVIOUS_START = datetime(2025, 3, 1).date()
 
 # Step 1: Process the JSONL file to reconstruct customer-order relationships
 customers = {}  # Store customer records
@@ -161,8 +176,10 @@ for customer_id, orders in orders_by_customer.items():
     if customer_id in customers:
         customers[customer_id]["orders"]["edges"] = [{"node": order} for order in orders]
 
-# Step 2: Process new customers, orders, and sales by day
-new_customers_by_day = defaultdict(lambda: {"customers": set(), "orders": 0, "total_sales": 0.0})
+# Step 2: Process new customers, orders, and sales by day for both periods
+current_new_customers_by_day = defaultdict(lambda: {"customers": set(), "orders": 0, "total_sales": 0.0})
+previous_new_customers_by_day = defaultdict(lambda: {"customers": set(), "orders": 0, "total_sales": 0.0})
+
 for customer_id, data in customers.items():
     orders = data.get("orders", {}).get("edges", [])
     
@@ -182,9 +199,22 @@ for customer_id, data in customers.items():
             earliest_order = {"date": order_date, "order": order}
     
     if earliest_order:
-        first_order_date = earliest_order["date"].strftime("%Y-%m-%d")
-        # This customer is new on first_order_date
-        new_customers_by_day[first_order_date]["customers"].add(customer_id)
+        first_order_date = earliest_order["date"]
+        first_order_day_str = first_order_date.strftime("%Y-%m-%d")
+        
+        # Determine the period
+        if CURRENT_START <= first_order_date <= CURRENT_END:
+            period = "current"
+            new_customers_by_day = current_new_customers_by_day
+        elif PREVIOUS_START <= first_order_date <= PREVIOUS_END:
+            period = "previous"
+            new_customers_by_day = previous_new_customers_by_day
+        else:
+            print(f"Customer {customer_id}'s first order on {first_order_day_str} is outside the defined periods, skipping")
+            continue
+        
+        # This customer is new on first_order_day_str
+        new_customers_by_day[first_order_day_str]["customers"].add(customer_id)
         
         # Count all orders placed by this customer on their first order date
         for order_edge in orders:
@@ -193,42 +223,69 @@ for customer_id, data in customers.items():
             if not created_at:
                 continue
             order_date = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ").date().strftime("%Y-%m-%d")
-            if order_date == first_order_date:
-                new_customers_by_day[first_order_date]["orders"] += 1
+            if order_date == first_order_day_str:
+                new_customers_by_day[first_order_day_str]["orders"] += 1
                 total_price = float(order.get("totalPriceSet", {}).get("shopMoney", {}).get("amount", 0.0))
-                new_customers_by_day[first_order_date]["total_sales"] += total_price
-        print(f"Customer {customer_id} is new on {first_order_date}")
+                new_customers_by_day[first_order_day_str]["total_sales"] += total_price
+        print(f"Customer {customer_id} is new on {first_order_day_str} in {period} period")
     else:
         print(f"Customer {customer_id} has no valid orders, skipping")
 
 # Step 3: Prepare the aggregated data for output
+# Function to get the corresponding day in the previous period
+def get_previous_period_day(day_str):
+    day = datetime.strptime(day_str, "%Y-%m-%d").date()
+    # Subtract 31 days to approximate the same day in the previous month
+    previous_day = day - timedelta(days=31)
+    return previous_day.strftime("%Y-%m-%d")
+
+# Aggregate data with previous period comparison
 data_list = []
-for day, metrics in sorted(new_customers_by_day.items()):
+for day in sorted(current_new_customers_by_day.keys()):
+    current_metrics = current_new_customers_by_day[day]
+    current_customers = len(current_metrics["customers"])
+    current_orders = current_metrics["orders"]
+    current_total_sales = round(current_metrics["total_sales"], 2)
+    
+    # Get the corresponding day in the previous period
+    prev_day = get_previous_period_day(day)
+    previous_metrics = previous_new_customers_by_day.get(prev_day, {"customers": set(), "orders": 0, "total_sales": 0.0})
+    prev_customers = len(previous_metrics["customers"])
+    prev_orders = previous_metrics["orders"]
+    prev_total_sales = round(previous_metrics["total_sales"], 2)
+    
     data_list.append((
         day,
-        len(metrics["customers"]),  # Number of new customers
-        metrics["orders"],         # Total orders by new customers on that day
-        round(metrics["total_sales"], 2)  # Total sales, rounded to 2 decimal places
+        current_customers,
+        current_orders,
+        current_total_sales,
+        prev_day,
+        prev_customers,
+        prev_orders,
+        prev_total_sales
     ))
 
 # Step 4: Output results and save to CSV
-print("Day | Customers | Orders | Total sales")
-print("-" * 40)
+print("Day | Customers | Orders | Total sales | Day (previous_period) | Customers (previous_period) | Orders (previous_period) | Total sales (previous_period)")
+print("-" * 100)
 with open("new_customers_over_time.csv", "w", newline="") as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(["Day", "Customers", "Orders", "Total sales"])
-    for day, customers, orders, total_sales in data_list:
-        # Print to console
-        print(f"{day} | {customers} | {orders} | {total_sales}")
-        # Write to CSV
-        writer.writerow([day, customers, orders, total_sales])
+    writer.writerow([
+        "Day", "Customers", "Orders", "Total sales",
+        "Day (previous_period)", "Customers (previous_period)", "Orders (previous_period)", "Total sales (previous_period)"
+    ])
+    for row in data_list:
+        day, customers, orders, total_sales, prev_day, prev_customers, prev_orders, prev_total_sales = row
+        print(f"{day} | {customers} | {orders} | {total_sales} | {prev_day} | {prev_customers} | {prev_orders} | {prev_total_sales}")
+        writer.writerow([day, customers, orders, total_sales, prev_day, prev_customers, prev_orders, prev_total_sales])
 
 # Log summary
 print(f"\nLines processed: {lines_processed}")
 print(f"Invalid lines skipped: {invalid_lines}")
-print(f"Days with new customers: {len(data_list)}")
+print(f"Days with new customers in current period: {len(data_list)}")
 
 ```
+
 
 #### How the Script Works
 **1. Read the JSONL File:**
@@ -248,10 +305,30 @@ print(f"Days with new customers: {len(data_list)}")
       - `Total sales`: Sums the `totalPriceSet.shopMoney.amount` for those orders.
 **4. Output:**
   - Sorts the data by day.
-  - Writes to `new_customers_over_time.csv` with columns `Day`, `Customers`, `Orders`, `Total sales`.
+  - Writes to `new_customers_over_time.csv` with columns `Day`, `Customers`, `Orders`, `Total sales`, `Day (previous_period)`, `Customers (previous_period)`, `Orders (previous_period)`, `Total sales (previous_period)` .
 
 #### Output
-<img width="736" alt="Screenshot 2025-05-07 at 00 07 44" src="https://github.com/user-attachments/assets/26b91504-0db1-4e43-80f0-0042e2073511" />
 
+```
+Total lines in file: 8
+Line 1: Found customer 7877707333828
+Line 2: Found order gid://shopify/Order/6097030021316 for customer 7877707333828
+Line 3: Found order gid://shopify/Order/6097059578052 for customer 7877707333828
+Line 4: Found customer 7877707366596
+Line 5: Found customer 7877707399364
+Line 6: Found customer 7879644184772
+Line 7: Found customer 7906903261380
+Line 8: Found order gid://shopify/Order/6097046110404 for customer 7906903261380
+Customer 7877707333828 is new on 2025-04-29 in current period
+Customer 7877707366596 has no orders, skipping
+Customer 7877707399364 has no orders, skipping
+Customer 7879644184772 has no orders, skipping
+Customer 7906903261380 is new on 2025-04-29 in current period
+Day | Customers | Orders | Total sales | Day (previous_period) | Customers (previous_period) | Orders (previous_period) | Total sales (previous_period)
+----------------------------------------------------------------------------------------------------
+2025-04-29 | 2 | 3 | 40709.83 | 2025-03-29 | 0 | 0 | 0.0
 
-
+Lines processed: 8
+Invalid lines skipped: 0
+Days with new customers in current period: 1
+```
