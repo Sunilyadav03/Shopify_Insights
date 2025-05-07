@@ -78,7 +78,7 @@ We need to:
 
     - Identify the last two months in the data (e.g., if the most recent date is in April 2025, compare `April 2025` with `March 2025`).
     - Compare dates `date-wise` (e.g., April 1st vs. March 1st, April 2nd vs. March 2nd).
-    - Output the `.csv` file in the format: `Day`, `Net sales`, `Day (previous_period)`, `Net sales (previous_period)`.
+    - Output the `net_sales_over_time.csv` file in the format: `Day`, `Net sales`, `Day (previous_period)`, `Net sales (previous_period)`.
 
 ***Processing Script***
 
