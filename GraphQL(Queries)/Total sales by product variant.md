@@ -1,4 +1,3 @@
-# Assumptions and Notes
 ### Data Source:
 Sales data is typically derived from orders, line items, and related objects like discounts, refunds, and taxes in Shopify’s GraphQL Admin API.
 
