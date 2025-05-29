@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+model Organisation {
+  id          String   @id
+  shop        String   @unique
+  accessToken String
+  email       String?
+  firstName   String?
+  createdAt   DateTime
+  data        Data[]   @relation("OrganisationData")
+}
+
+model Data {
+  id            String        @id
+  shop          String
+  createdAt     DateTime      @default(now()) // Time when Data entry is created
+  updatedAt     DateTime      @updatedAt      // Time when insights are modified
+  insights      String        // Plain text content of a .txt file
+
+  organisation  Organisation  @relation("OrganisationData", fields: [shop], references: [shop], onDelete: Cascade)
+}
